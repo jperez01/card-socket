@@ -17,17 +17,37 @@ app.get('/', (req, res) => {
 
 io.on('connection', (socket) => {
     console.log('User connected');
-    const response = new Date();
 
-    socket.on('disconnect', () => {
-        clearInterval(interval);
+    socket.on('create room', () => {
+        let newID = idMaker();
+        socket.join(newID);
+        io.emit('created', newID);
     });
 
-    socket.on('message', data => {
-        console.log(data);
+    socket.on('join room', id => {
+        console.log(socket + ' joined Room: ' + id);
+        socket.join(id);
+    });
+
+    socket.on('send to users', id => {
+        socket.to(id).emit('Hello');
     })
+
+    socket.on('disconnect', () => {
+        console.log('User Disconnected');
+    });
 });
 
 server.listen(port, () => {
     console.log(`listening on ${port}`);
 });
+
+let idMaker = function() {
+    let characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let charactersLength = characters.length;
+    let result = '';
+    for (let i = 0; i < 5; i++) {
+        result += characters.charAt(Math.floor(Math.random() * charactersLength));
+    }
+    return result;
+}
