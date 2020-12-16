@@ -22,6 +22,7 @@ let readyUsers = {};
 // Shows if a room is playing a game
 let playingRoom = {};
 
+
 io.on('connection', (socket) => {
 
     console.log('User connected');
@@ -47,7 +48,6 @@ io.on('connection', (socket) => {
             let newUsersInRoom = rooms[id].length;
 
             console.log('Socket joined Room: ' + id);
-    
             if (newUsersInRoom === 2) {
                 io.to(socket.roomID).emit('enough players', null);
             }
@@ -56,10 +56,6 @@ io.on('connection', (socket) => {
                 io.to(socket.roomID).emit('room users', newUsersInRoom);
             }
         }
-    });
-
-    socket.on('send to users', id => {
-        socket.to(id).emit('Hello');
     });
 
     socket.on('get room users', () => {
@@ -74,9 +70,33 @@ io.on('connection', (socket) => {
         if (gameStarted(socket.roomID)) {
             io.to(socket.id).emit('game in progress', null);
         } else {
+            io.to(socket.id).emit('player name', currentReadyUsers);
             io.to(socket.id).emit('room users', numUsers);
             io.to(socket.roomID).emit('current ready', currentReadyUsers);
         }
+    });
+
+    socket.on('store cards', urls => {
+        let id = socket.roomID;
+        let length = rooms[id].length;
+        let user = 1;
+        let index = 0;
+        for (let i = 0; i < length; i++) {
+            let cards = [];
+            for (let j = 0; j < 3; j++) {
+                cards.push(urls[index]);
+                index++;
+            }
+            io.to(id).emit('get cards P' + user, cards);
+            user++;
+        }
+        let houseUrls = [];
+        let max = 52 - index - 1;
+        for (let i = 0; i < max; i++) {
+            houseUrls.push(urls[index]);
+            index++;
+        }
+        io.to(id).emit('send house cards', houseUrls);
     });
 
     socket.on('game started', () => {
