@@ -99,6 +99,15 @@ io.on('connection', (socket) => {
         io.to(id).emit('send house cards', houseUrls);
     });
 
+    socket.on('deal card', () => {
+        io.to(socket.roomID).emit('handle deal');
+    })
+
+    socket.on('send card', (url, player) => {
+        console.log("Player" + player);
+        io.to(socket.id).emit(`dealt card ${player}`, url);
+    });
+
     socket.on('game started', () => {
         playingRoom[socket.roomID] = true;
     });
