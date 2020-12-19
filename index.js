@@ -76,6 +76,10 @@ io.on('connection', (socket) => {
         }
     });
 
+    socket.on('reset', () => {
+        io.to(socket.roomID).emit('reset');
+    })
+
     socket.on('store cards', urls => {
         let id = socket.roomID;
         let length = rooms[id].length;
@@ -101,10 +105,9 @@ io.on('connection', (socket) => {
 
     socket.on('deal card', () => {
         io.to(socket.roomID).emit('handle deal');
-    })
+    });
 
     socket.on('send card', (url, player) => {
-        console.log("Player" + player);
         io.to(socket.id).emit(`dealt card ${player}`, url);
     });
 
