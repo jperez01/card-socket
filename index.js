@@ -95,12 +95,17 @@ io.on('connection', (socket) => {
             user++;
         }
         let houseUrls = [];
+        let dealtCards = [];
         let max = 52 - index - 1;
-        for (let i = 0; i < max; i++) {
+        for (let i = 0; i < 3; i++) {
+            dealtCards.push(urls[index]);
+            index++;
+        }
+        for (let i = 3; i < max; i++) {
             houseUrls.push(urls[index]);
             index++;
         }
-        io.to(id).emit('send house cards', houseUrls);
+        io.to(id).emit('send house cards', houseUrls, dealtCards);
     });
 
     socket.on('deal card', () => {
