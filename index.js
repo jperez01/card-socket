@@ -116,6 +116,10 @@ io.on('connection', (socket) => {
         io.to(socket.id).emit(`dealt card ${player}`, url);
     });
 
+    socket.on('change turn', (player) => {
+        io.to(socket.roomID).emit('next player', player);
+    })
+
     socket.on('game started', () => {
         playingRoom[socket.roomID] = true;
     });
