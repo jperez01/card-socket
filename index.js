@@ -36,7 +36,7 @@ io.on('connection', (socket) => {
         playingRoom[newID] = false;
 
         console.log('User joined room: ' + newID);
-        io.emit('created', newID);
+        io.emit('created', newID, 1);
     });
 
     socket.on('join room', id => {
@@ -49,9 +49,9 @@ io.on('connection', (socket) => {
 
             console.log('Socket joined Room: ' + id);
             if (newUsersInRoom === 2) {
-                io.to(socket.roomID).emit('enough players', null);
+                io.to(socket.roomID).emit('enough players');
             }
-            io.to(socket.id).emit('joined room', 'Joined');
+            io.to(socket.id).emit('joined room', newUsersInRoom);
             if (!gameStarted(socket.roomID)) {
                 io.to(socket.roomID).emit('room users', newUsersInRoom);
             }
@@ -59,28 +59,37 @@ io.on('connection', (socket) => {
     });
 
     socket.on('get room users', () => {
-        let numUsers = rooms[socket.roomID].length;
-        readyUsers[socket.roomID] = readyUsers[socket.roomID] + 1;
-        let currentReadyUsers = readyUsers[socket.roomID];
-
-        console.log('User got num of users in room: ' + socket.roomID);
-        console.log('Total Users: ' + numUsers);
-        console.log('Ready Users: ' + currentReadyUsers);
-
         if (gameStarted(socket.roomID)) {
             io.to(socket.id).emit('game in progress', null);
         } else {
-            io.to(socket.id).emit('player name', currentReadyUsers);
+            let numUsers = rooms[socket.roomID].length;
+            readyUsers[socket.roomID] = readyUsers[socket.roomID] + 1;
+            let currentReadyUsers = readyUsers[socket.roomID];
+            
             io.to(socket.id).emit('room users', numUsers);
             io.to(socket.roomID).emit('current ready', currentReadyUsers);
         }
     });
 
-    socket.on('reset', () => {
-        io.to(socket.roomID).emit('reset');
+    socket.on('get end users', () => {
+        let numUsers = rooms[socket.roomID].length;
+        io.to(socket.id).emit('room users', numUsers);
     })
+    socket.on('enable reset', () => {
+        let numUsers = rooms[socket.roomID].length;
+        readyUsers[socket.roomID] = readyUsers[socket.roomID] + 1;
+        let currentReadyUsers = readyUsers[socket.roomID];
+
+        io.to(socket.id).emit('room users', numUsers);
+        io.to(socket.roomID).emit('current ready', currentReadyUsers);
+    });
+
+    socket.on('reset', () => {
+        io.to(socket.id).emit('reset');
+    });
 
     socket.on('store cards', urls => {
+        playingRoom[socket.roomID] = true;
         let id = socket.roomID;
         let length = rooms[id].length;
         let user = 1;
@@ -121,11 +130,13 @@ io.on('connection', (socket) => {
     })
 
     socket.on('game started', () => {
-        playingRoom[socket.roomID] = true;
+        io.to(socket.roomID).emit('start game');
     });
 
     socket.on('game ended', () => {
+        readyUsers[socket.roomID] = 0;
         playingRoom[socket.roomID] = false;
+        io.to(socket.roomID).emit('game ended');
     })
 
     socket.on('disconnect', () => {
