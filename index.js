@@ -21,6 +21,8 @@ let rooms = io.sockets.adapter.rooms;
 let readyUsers = {};
 // Shows if a room is playing a game
 let playingRoom = {};
+// Shows if name is available
+let availableNames = {};
 
 
 io.on('connection', (socket) => {
@@ -32,8 +34,15 @@ io.on('connection', (socket) => {
 
         socket.join(newID);
         socket.roomID = newID;
+        socket.name = 'P1';
         readyUsers[newID] = 0;
         playingRoom[newID] = false;
+        availableNames[newID] = {
+            P1: false,
+            P2: false,
+            P3: false,
+            P4: false
+        };
 
         console.log('User joined room: ' + newID);
         io.emit('created', newID, 1);
@@ -41,26 +50,53 @@ io.on('connection', (socket) => {
 
     socket.on('join room', id => {
         if (rooms[id].length === 4) {
-            io.to(socket.id).emit('Too many players', null);
+            io.to(socket.id).emit('Too many players');
         } else {
             socket.join(id);
             socket.roomID = id;
             let newUsersInRoom = rooms[id].length;
+            for (let i = 0; i < newUsersInRoom; i++) {
+                let value = `P${i}`;
+                if (availableNames[socket.roomID][value]) {
+                    socket.name = value;
+                    break;
+                }
+            }
+            if (socket.name === undefined) {
+                socket.name = `P${newUsersInRoom}`;
+            }
 
             console.log('Socket joined Room: ' + id);
             if (newUsersInRoom === 2) {
                 io.to(socket.roomID).emit('enough players');
             }
-            io.to(socket.id).emit('joined room', newUsersInRoom);
+            io.to(socket.id).emit('joined room', socket.name);
             if (!gameStarted(socket.roomID)) {
                 io.to(socket.roomID).emit('room users', newUsersInRoom);
             }
         }
     });
 
+    socket.on('rejoin room', (roomID) => {
+        socket.join(roomID);
+        socket.roomID = roomID;
+        playingRoom[roomID] = false;
+        readyUsers[roomID] = 0;
+        io.to(socket.roomID).emit('suspend game');
+    });
+
+    socket.on('leave room', (roomID) => {
+        socket.leave(roomID);
+        availableNames[socket.roomID][socket.name] = true;
+        socket.name = undefined;
+        socket.roomID = undefined;
+        socket.broadcast.to(roomID).emit('player left', rooms[roomID].length);
+    })
+
     socket.on('get room users', () => {
+        console.log("users gotten");
         if (gameStarted(socket.roomID)) {
-            io.to(socket.id).emit('game in progress', null);
+            io.to(socket.id).emit('game in progress');
         } else {
             let numUsers = rooms[socket.roomID].length;
             readyUsers[socket.roomID] = readyUsers[socket.roomID] + 1;
@@ -140,6 +176,10 @@ io.on('connection', (socket) => {
     })
 
     socket.on('disconnect', () => {
+        if (socket.roomID !== undefined) {
+            socket.leave(socket.roomID);
+            availableNames[socket.roomID][socket.name] = true;
+        }
         console.log('User Disconnected');
     });
 });
