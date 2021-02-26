@@ -99,7 +99,7 @@ io.on('connection', (socket) => {
             io.to(socket.id).emit('game in progress');
         } else {
             let numUsers = rooms[socket.roomID].length;
-            readyUsers[socket.roomID] = readyUsers[socket.roomID] + 1;
+            readyUsers[socket.roomID] += 1;
             let currentReadyUsers = readyUsers[socket.roomID];
             
             io.to(socket.id).emit('room users', numUsers);
@@ -113,12 +113,18 @@ io.on('connection', (socket) => {
     })
     socket.on('enable reset', () => {
         let numUsers = rooms[socket.roomID].length;
-        readyUsers[socket.roomID] = readyUsers[socket.roomID] + 1;
+        readyUsers[socket.roomID] += 1;
         let currentReadyUsers = readyUsers[socket.roomID];
 
         io.to(socket.id).emit('room users', numUsers);
         io.to(socket.roomID).emit('current ready', currentReadyUsers);
     });
+
+    socket.on('cancel reset', () => {
+        readyUsers[socket.roomID] -= 1;
+        let currentReady = readyUsers[socket.roomID];
+        socket.broadcast.to(socket.roomID).emit('current ready', currentReady);
+    })
 
     socket.on('reset', () => {
         io.to(socket.id).emit('reset');
