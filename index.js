@@ -21,13 +21,11 @@ let rooms = io.sockets.adapter.rooms;
 let readyUsers = {};
 // Shows if a room is playing a game
 let playingRoom = {};
-// Shows if name is available
+// Shows if name is available for room
 let availableNames = {};
 
 
 io.on('connection', (socket) => {
-
-    console.log('User connected');
 
     socket.on('create room', () => {
         let newID = idMaker();
@@ -49,15 +47,18 @@ io.on('connection', (socket) => {
     });
 
     socket.on('join room', id => {
-        if (rooms[id].length === 4) {
+        if (rooms[id] === undefined) {
+            io.to(socket.id).emit('wrong id');
+        } else if (rooms[id].length === 4) {
             io.to(socket.id).emit('Too many players');
         } else {
             socket.join(id);
             socket.roomID = id;
             let newUsersInRoom = rooms[id].length;
-            for (let i = 0; i < newUsersInRoom; i++) {
+            for (let i = 1; i < newUsersInRoom + 1; i++) {
                 let value = `P${i}`;
                 if (availableNames[socket.roomID][value]) {
+                    availableNames[socket.roomID][value] = false;
                     socket.name = value;
                     break;
                 }
@@ -90,8 +91,11 @@ io.on('connection', (socket) => {
         availableNames[socket.roomID][socket.name] = true;
         socket.name = undefined;
         socket.roomID = undefined;
-        socket.broadcast.to(roomID).emit('player left', rooms[roomID].length);
-    })
+        let players = rooms[roomID];
+        if (players !== undefined) {
+            socket.broadcast.to(roomID).emit('player left', players.length);
+        }
+    });
 
     socket.on('get room users', () => {
         console.log("users gotten");
@@ -107,10 +111,12 @@ io.on('connection', (socket) => {
         }
     });
 
+    // Used when game has ended
     socket.on('get end users', () => {
         let numUsers = rooms[socket.roomID].length;
         io.to(socket.id).emit('room users', numUsers);
-    })
+    });
+
     socket.on('enable reset', () => {
         let numUsers = rooms[socket.roomID].length;
         readyUsers[socket.roomID] += 1;
